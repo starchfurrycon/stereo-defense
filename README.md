@@ -30,6 +30,24 @@
 
 拉黑默认**只在你确认后执行**。扫描结果本身不会修改任何账号状态。
 
+## 界面
+
+技术风、无图形素材，层次全部由发丝描边、极浅渐变、明度差和字号对比拉出来。
+
+| 账号 | 画像 |
+| --- | --- |
+| ![账号](docs/account.png) | ![画像](docs/profile.png) |
+
+| 扫描 | 复核 |
+| --- | --- |
+| ![扫描](docs/scan.png) | ![复核](docs/review.png) |
+
+| 黑名单 | 设置 |
+| --- | --- |
+| ![黑名单](docs/blacklist.png) | ![设置](docs/settings.png) |
+
+组件层沿用 shadcn/ui 的组织方式（`clsx` + `tailwind-merge`，语义化令牌与变体式组件），但不引入 Radix：Radix 的浮层依赖 portal，在用户脚本的 Shadow DOM 里需要额外接管 portal 容器，收益不抵复杂度。下拉选择因此是自实现的，不做 portal。
+
 ## 判定原理
 
 ### 双引擎提炼画像
@@ -92,8 +110,15 @@ pnpm build          # 构建用户脚本 -> dist/stereo-defense.user.js
 pnpm build:web      # 构建静态页面 -> dist-web/
 pnpm build:all      # 两者都构建
 pnpm preview        # 预览静态页面
-pnpm smoke          # 用本机 Chrome 做渲染冒烟测试（需先 pnpm preview）
+pnpm smoke          # 渲染冒烟测试：断言计算样式、逐标签切换、零控制台报错
+pnpm shots          # 逐个标签截图到 docs/
 ```
+
+`pnpm smoke` 需要先跑 `pnpm preview`。它读取的是**计算样式**而不是 CSS 文本，因此能挡住「样式表里有、但没落到元素上」这类问题。
+
+### 一个必须记住的约束
+
+`src/styles.css` 里的全局重置写在 `@layer base` 内，**不能挪到分层之外**。非分层的规则优先级高于 `@layer utilities`，一旦重置裸写在顶层，Tailwind 的边框、背景、圆角、内边距会全部失效，界面会退化成没有任何样式的纯文本——而且编译不报错、类型检查也过。
 
 ### 结构
 

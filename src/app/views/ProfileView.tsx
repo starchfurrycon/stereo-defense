@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import { Btn, Field, Panel, Tag, TextArea } from '../ui'
+import { Alert, Btn, Field, Panel, Tag, TextArea, cn } from '../ui'
 import { useStore } from '../../lib/store'
 import { buildLocalProfile } from '../../lib/analyze/local'
-import { embedStatus, loadEmbedder, MODEL_ID, onEmbedStatus } from '../../lib/analyze/embed'
+import { embedStatus, loadEmbedder, onEmbedStatus } from '../../lib/analyze/embed'
 import { generateProfile } from '../../lib/llm/provider'
 import { PROFILE_SYSTEM, profileUserPrompt } from '../../lib/llm/prompt'
 import { formatCost } from '../../lib/llm/pricing'
@@ -75,29 +75,48 @@ export function ProfileView() {
       <Panel
         title="偏好"
         right={
-          <div className="flex items-center gap-2">
-            <Tag tone={useLlm ? 'accent' : 'dim'}>{useLlm ? llm.model || 'LLM' : '本地模型'}</Tag>
-            <Btn tone="primary" onClick={generate} disabled={busy || !rawInput.trim()}>
+          <>
+            {useLlm ? (
+              <Tag tone="accent">{llm.model || 'LLM'}</Tag>
+            ) : embed === 'idle' ? (
+              <Btn size="sm" variant="ghost" onClick={() => void loadEmbedder()} disabled={busy}>
+                加载语义模型
+              </Btn>
+            ) : (
+              <Tag tone={embed === 'ready' ? 'ok' : embed === 'unavailable' ? 'warn' : 'dim'}>
+                {embed === 'ready' ? '语义模型' : embed === 'unavailable' ? '词表匹配' : '加载中'}
+              </Tag>
+            )}
+            <Btn variant="primary" onClick={generate} disabled={busy || !rawInput.trim()}>
               {busy ? '提炼中' : '生成画像'}
             </Btn>
-          </div>
+          </>
         }
       >
         <TextArea
-          rows={4}
+          rows={5}
           value={rawInput}
           onChange={(e) => setRawInput(e.target.value)}
           placeholder="描述你不想再看到的人"
+          className="text-[13.5px]"
         />
-        <div className="mt-2 flex items-center justify-between gap-4">
-          <span className="text-[11px] text-faint">
-            {!useLlm && embed === 'loading' ? '本地模型加载中' : status}
-          </span>
+        <div className="mt-3 flex min-h-[20px] flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0 flex-1">{status && <Alert tone="warn">{status}</Alert>}</div>
           {usage && (
-            <span className="sd-mono text-[11px] text-faint">
-              {usage.totalTokens.toLocaleString()} tok · {formatCost(usage.costUsd)} · {usage.calls} 次
-              {!usage.authoritative && ' · 估算'}
-            </span>
+            <div className="sd-mono flex shrink-0 items-center gap-3 text-[11.5px] text-faint">
+              <span>
+                <span className="text-dim">{usage.totalTokens.toLocaleString()}</span> tok
+              </span>
+              <span className="h-3 w-px bg-line2" />
+              <span>
+                <span className="text-dim">{formatCost(usage.costUsd)}</span>
+              </span>
+              <span className="h-3 w-px bg-line2" />
+              <span>
+                <span className="text-dim">{usage.calls}</span> 次
+              </span>
+              {!usage.authoritative && <span className="text-warn">估算</span>}
+            </div>
           )}
         </div>
       </Panel>
@@ -105,28 +124,31 @@ export function ProfileView() {
       {profile && (
         <div className="grid gap-4 lg:grid-cols-2">
           <Panel title="判定标准">
-            <div className="grid gap-3">
+            <div className="grid gap-4">
               <Field label="目标人群">
                 <TextArea rows={2} value={profile.target} onChange={(e) => patch({ target: e.target.value })} />
               </Field>
+
               <div>
-                <div className="mb-1.5 text-[12px] text-dim">立场族</div>
+                <div className="mb-2 text-[12px] font-medium text-dim">立场族</div>
                 <div className="flex flex-wrap gap-1.5">
                   {FAMILIES.map((f) => {
                     const on = profile.families.includes(f.id)
                     return (
                       <button
                         key={f.id}
+                        type="button"
                         onClick={() =>
                           patch({
-                            families: on
-                              ? profile.families.filter((x) => x !== f.id)
-                              : [...profile.families, f.id],
+                            families: on ? profile.families.filter((x) => x !== f.id) : [...profile.families, f.id],
                           })
                         }
-                        className={`border px-2 py-0.5 text-[11px] transition-colors ${
-                          on ? 'border-accent/50 text-accent' : 'border-line2 text-faint hover:text-dim'
-                        }`}
+                        className={cn(
+                          'rounded-full border px-2.5 py-1 text-[11.5px] transition-colors duration-100',
+                          on
+                            ? 'border-accent/35 bg-accent/12 text-accent'
+                            : 'border-line2 text-faint hover:border-faint/60 hover:text-dim',
+                        )}
                       >
                         {FAMILY_LABEL.get(f.id)}
                       </button>
@@ -134,49 +156,51 @@ export function ProfileView() {
                   })}
                 </div>
               </div>
-              <Field label="检索领域词" hint="只决定去哪找">
-                <TextArea rows={3} value={listToText(profile.topics)} onChange={(e) => patch({ topics: textToList(e.target.value) })} />
+
+              <Field label="检索领域词" hint={profile.topics.length}>
+                <TextArea
+                  rows={4}
+                  value={listToText(profile.topics)}
+                  onChange={(e) => patch({ topics: textToList(e.target.value) })}
+                />
               </Field>
-              <Field label="放行">
-                <TextArea rows={2} value={listToText(profile.allow)} onChange={(e) => patch({ allow: textToList(e.target.value) })} />
+
+              <Field label="放行" hint={profile.allow.length}>
+                <TextArea
+                  rows={3}
+                  value={listToText(profile.allow)}
+                  onChange={(e) => patch({ allow: textToList(e.target.value) })}
+                />
               </Field>
             </div>
           </Panel>
 
           <Panel title="判定依据">
-            <div className="grid gap-3">
-              <Field label="目标话术" hint={`${profile.markers.length}`}>
-                <TextArea rows={8} value={listToText(profile.markers)} onChange={(e) => patch({ markers: textToList(e.target.value) })} />
+            <div className="grid gap-4">
+              <Field label="目标话术" hint={profile.markers.length}>
+                <TextArea
+                  rows={10}
+                  value={listToText(profile.markers)}
+                  onChange={(e) => patch({ markers: textToList(e.target.value) })}
+                />
               </Field>
-              <Field label="反驳语境词" hint={`${profile.guards.length}`}>
-                <TextArea rows={6} value={listToText(profile.guards)} onChange={(e) => patch({ guards: textToList(e.target.value) })} />
+              <Field label="反驳语境词" hint={profile.guards.length}>
+                <TextArea
+                  rows={7}
+                  value={listToText(profile.guards)}
+                  onChange={(e) => patch({ guards: textToList(e.target.value) })}
+                />
               </Field>
-              <Field label="典型样例" hint={`${profile.exemplars.length}`}>
-                <TextArea rows={4} value={listToText(profile.exemplars)} onChange={(e) => patch({ exemplars: textToList(e.target.value) })} />
+              <Field label="典型样例" hint={profile.exemplars.length}>
+                <TextArea
+                  rows={5}
+                  value={listToText(profile.exemplars)}
+                  onChange={(e) => patch({ exemplars: textToList(e.target.value) })}
+                />
               </Field>
             </div>
           </Panel>
         </div>
-      )}
-
-      {!useLlm && profile && (
-        <Panel
-          title="本地引擎"
-          right={
-            embed === 'idle' ? (
-              <Btn onClick={() => void loadEmbedder()} disabled={busy}>
-                加载语义模型
-              </Btn>
-            ) : undefined
-          }
-        >
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[12px]">
-            <span className="sd-mono text-dim">{MODEL_ID}</span>
-            <span className={embed === 'ready' ? 'text-accent' : embed === 'unavailable' ? 'text-warn' : 'text-faint'}>
-              {embed === 'ready' ? '已加载' : embed === 'unavailable' ? '不可用，已降级为词表匹配' : embed === 'loading' ? '加载中' : '未加载'}
-            </span>
-          </div>
-        </Panel>
       )}
     </div>
   )

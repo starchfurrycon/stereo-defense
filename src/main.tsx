@@ -26,8 +26,13 @@ function mount(): void {
   shadow.appendChild(container)
 
   const launcher = document.createElement('button')
+  launcher.type = 'button'
   launcher.className = 'sd-launcher'
-  launcher.textContent = '防御'
+  const dot = document.createElement('span')
+  dot.className = 'sd-launcher-dot'
+  const label = document.createElement('span')
+  label.textContent = '立体防御'
+  launcher.append(dot, label)
   container.appendChild(launcher)
 
   const overlay = document.createElement('div')

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Btn, Empty, Panel, Stat } from '../ui'
+import { Alert, Btn, Empty, Panel, Stat } from '../ui'
 import { useStore } from '../../lib/store'
 import { ACT_UNBLOCK, fetchBlacklist, modifyRelation } from '../../lib/bili/api'
 
@@ -21,7 +21,6 @@ export function BlacklistView() {
         if (all.length >= total || list.length < 50) break
       }
       setBlacklist(all)
-      setNote(`共 ${all.length}`)
     } catch (err) {
       setNote(err instanceof Error ? err.message : '读取失败')
     } finally {
@@ -45,43 +44,51 @@ export function BlacklistView() {
     }
   }
 
+  const executed = blacklist.filter((b) => b.score !== undefined).length
+
   return (
     <div className="grid gap-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Stat label="已记录" value={blacklist.length} />
+        <Stat label="本次执行" value={executed} tone={executed ? 'accent' : 'dim'} />
+      </div>
+
+      {note && <Alert tone="danger">{note}</Alert>}
+
       <Panel
-        title="黑名单"
+        title="列表"
+        count={blacklist.length || undefined}
+        flush
         right={
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] text-faint">{note}</span>
-            <Btn onClick={load} disabled={busy || !account.ok}>
-              {busy ? '读取中' : '同步'}
-            </Btn>
-          </div>
+          <Btn size="sm" onClick={load} disabled={busy || !account.ok}>
+            {busy ? '读取中' : '同步'}
+          </Btn>
         }
       >
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Stat label="已记录" value={blacklist.length} />
-          <Stat label="本次执行" value={blacklist.filter((b) => b.score !== undefined).length} tone="accent" />
-        </div>
-      </Panel>
-
-      <Panel title="列表">
-        <div className="-mx-4 -mb-4 border-t border-line">
+        <div className="border-t border-line">
           {blacklist.length === 0 ? (
             <Empty>暂无记录</Empty>
           ) : (
             blacklist.map((b) => (
-              <div key={b.mid} className="flex items-center gap-3 border-b border-line px-4 py-2 last:border-b-0">
+              <div
+                key={b.mid}
+                className="flex items-center gap-4 border-b border-line px-4 py-2.5 transition-colors last:border-b-0 hover:bg-raise/60"
+              >
                 <a
                   href={`https://space.bilibili.com/${b.mid}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex-1 truncate text-[13px] hover:text-accent"
+                  className="min-w-0 flex-1 truncate text-[13px] text-ink transition-colors hover:text-accent"
                 >
                   {b.uname || `UID ${b.mid}`}
                 </a>
-                <span className="sd-mono text-[11px] text-faint">{b.mid}</span>
-                {b.score !== undefined && <span className="sd-mono text-[11px] text-accent">{b.score.toFixed(2)}</span>}
-                <Btn tone="ghost" onClick={() => unblock(b.mid)} disabled={busy}>
+                <span className="sd-mono shrink-0 text-[11px] text-faint">{b.mid}</span>
+                {b.score !== undefined && (
+                  <span className="sd-mono w-8 shrink-0 text-right text-[12px] text-accent">
+                    {(b.score * 100).toFixed(0)}
+                  </span>
+                )}
+                <Btn size="sm" variant="ghost" onClick={() => unblock(b.mid)} disabled={busy}>
                   解除
                 </Btn>
               </div>

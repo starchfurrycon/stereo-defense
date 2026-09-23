@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { Btn, Empty, Meter, Panel, Stat, Tag } from '../ui'
+import { useMemo, useState, type CSSProperties } from 'react'
+import { Alert, Btn, Checkbox, Empty, Icon, Meter, Panel, Segmented, Stat, Tag, cn } from '../ui'
 import { useStore } from '../../lib/store'
 import { ACT_BLOCK, batchBlock, modifyRelation } from '../../lib/bili/api'
 import { applyThresholds } from '../../lib/analyze/score'
@@ -13,84 +13,90 @@ function chunks<T>(list: T[], size: number): T[][] {
   return out
 }
 
-function Row({
-  c,
-  selected,
-  onToggle,
-}: {
-  c: Candidate
-  selected: boolean
-  onToggle: () => void
-}) {
+function formatFans(n: number): string {
+  if (n >= 10000) return `${(n / 10000).toFixed(1)}万`
+  return String(n)
+}
+
+function scoreTone(score: number): string {
+  if (score >= 0.72) return 'text-accent'
+  if (score >= 0.42) return 'text-warn'
+  return 'text-dim'
+}
+
+function Row({ c, selected, onToggle }: { c: Candidate; selected: boolean; onToggle: () => void }) {
   const [open, setOpen] = useState(false)
   const sources = useMemo(() => [...new Set(c.evidences.map((e) => e.source))], [c.evidences])
 
   return (
-    <div className={`border-b border-line last:border-b-0 ${selected ? 'bg-accent/[0.04]' : ''}`}>
-      <div className="flex items-start gap-3 px-4 py-2.5">
-        <button
-          onClick={onToggle}
-          className={`mt-0.5 h-3.5 w-3.5 shrink-0 border transition-colors ${
-            selected ? 'border-accent bg-accent/30' : 'border-line2 hover:border-faint'
-          }`}
-          aria-label="选择"
-        />
+    <div className={cn('border-b border-line transition-colors last:border-b-0', selected && 'bg-accent/[0.045]')}>
+      <div className="flex items-start gap-3 px-4 py-3">
+        <Checkbox checked={selected} onChange={onToggle} className="mt-[3px]" />
+
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
             <a
               href={`https://space.bilibili.com/${c.mid}`}
               target="_blank"
               rel="noreferrer"
-              className="text-[13px] text-ink hover:text-accent"
+              className="text-[13.5px] font-medium text-ink transition-colors hover:text-accent"
             >
               {c.uname || `UID ${c.mid}`}
             </a>
             <span className="sd-mono text-[11px] text-faint">{c.mid}</span>
-            <Meter value={c.score} />
             {c.fans ? <span className="sd-mono text-[11px] text-faint">{formatFans(c.fans)} 粉</span> : null}
-            {c.blocked && <Tag tone="accent">已拉黑</Tag>}
+            {c.blocked && <Tag tone="ok">已拉黑</Tag>}
             {c.flags.map((f) => (
               <Tag key={f} tone={f === '命中白名单' || f === '机构认证' ? 'danger' : 'warn'}>
                 {f}
               </Tag>
             ))}
           </div>
+
           {c.sign && <div className="mt-1 truncate text-[12px] text-dim">{c.sign}</div>}
-          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">
             {sources.map((s) => (
               <Tag key={s}>{SOURCE_LABEL[s]}</Tag>
             ))}
-            <button onClick={() => setOpen((v) => !v)} className="text-[11px] text-faint hover:text-dim">
-              {open ? '收起依据' : `依据 ${c.evidences.length}`}
+            <button
+              type="button"
+              onClick={() => setOpen((v) => !v)}
+              className="ml-0.5 inline-flex items-center gap-1 rounded-sm px-1.5 py-0.5 text-[11px] text-faint transition-colors hover:bg-raise hover:text-dim"
+            >
+              <Icon name={open ? 'chevronDown' : 'chevronRight'} size={11} />
+              依据 {c.evidences.length}
             </button>
           </div>
+        </div>
+
+        <div className="flex w-[86px] shrink-0 flex-col items-end gap-2 pt-px">
+          <span className={cn('sd-mono text-[17px] leading-none font-medium tracking-[-0.02em]', scoreTone(c.score))}>
+            {(c.score * 100).toFixed(0)}
+          </span>
+          <Meter value={c.score} width={78} showValue={false} />
         </div>
       </div>
 
       {open && (
-        <div className="space-y-1.5 px-4 pb-3 pl-11">
+        <div className="space-y-2 px-4 pb-4 pl-[46px]">
           {c.evidences.slice(0, 6).map((e, i) => (
             <div key={i} className="border-l border-line2 pl-3">
               <div className="flex flex-wrap items-center gap-2 text-[11px]">
                 <Tag tone={e.score >= 0.72 ? 'accent' : 'dim'}>{SOURCE_LABEL[e.source]}</Tag>
                 <span className="sd-mono text-faint">
-                  {e.score.toFixed(2)} / 词 {(e.lexical * 100).toFixed(0)} / 义 {(e.semantic * 100).toFixed(0)}
+                  {e.score.toFixed(2)} · 词 {(e.lexical * 100).toFixed(0)} · 义 {(e.semantic * 100).toFixed(0)}
                 </span>
                 {e.hits.length > 0 && <span className="text-accent">{e.hits.join(' ')}</span>}
                 {e.guardHits.length > 0 && <span className="text-warn">反驳 {e.guardHits.slice(0, 3).join(' ')}</span>}
               </div>
-              <div className="mt-0.5 text-[12px] break-all text-dim">{e.text}</div>
+              <div className="mt-1 text-[12px] leading-relaxed break-all text-dim">{e.text}</div>
             </div>
           ))}
         </div>
       )}
     </div>
   )
-}
-
-function formatFans(n: number): string {
-  if (n >= 10000) return `${(n / 10000).toFixed(1)}万`
-  return String(n)
 }
 
 export function ReviewView() {
@@ -115,10 +121,7 @@ export function ReviewView() {
   const [filter, setFilter] = useState<'all' | 'block' | 'review'>('all')
 
   const shown = useMemo(() => {
-    const list = candidates.filter((c) => {
-      if (filter === 'all') return c.verdict !== 'skip'
-      return c.verdict === filter
-    })
+    const list = candidates.filter((c) => (filter === 'all' ? c.verdict !== 'skip' : c.verdict === filter))
     return list.sort((a, b) => b.score - a.score)
   }, [candidates, filter])
 
@@ -161,9 +164,17 @@ export function ReviewView() {
         const res = await arbitrate(llm, ARBITER_SYSTEM, arbiterUserPrompt(profile, c.uname, c.sign, snippets))
         addUsage(res.usage)
         if (res.decision === 'pass') {
-          patchCandidate(c.mid, { verdict: 'skip', score: Math.min(c.score, thresholds.review - 0.01), flags: [...c.flags, 'AI 排除'] })
+          patchCandidate(c.mid, {
+            verdict: 'skip',
+            score: Math.min(c.score, thresholds.review - 0.01),
+            flags: [...c.flags, 'AI 排除'],
+          })
         } else if (res.decision === 'block') {
-          patchCandidate(c.mid, { verdict: 'block', score: Math.max(c.score, thresholds.block + 0.02), flags: [...c.flags, 'AI 确认'] })
+          patchCandidate(c.mid, {
+            verdict: 'block',
+            score: Math.max(c.score, thresholds.block + 0.02),
+            flags: [...c.flags, 'AI 确认'],
+          })
         } else {
           patchCandidate(c.mid, { flags: [...c.flags, 'AI 存疑'] })
         }
@@ -224,7 +235,8 @@ export function ReviewView() {
     if (!profile) return
     const names = candidates.filter((c) => selected.has(c.mid)).map((c) => c.uname).filter(Boolean)
     useStore.getState().setProfile({ ...profile, allow: [...new Set([...profile.allow, ...names])] })
-    for (const c of candidates) if (selected.has(c.mid)) patchCandidate(c.mid, { score: 0, verdict: 'skip', flags: [...c.flags, '命中白名单'] })
+    for (const c of candidates)
+      if (selected.has(c.mid)) patchCandidate(c.mid, { score: 0, verdict: 'skip', flags: [...c.flags, '命中白名单'] })
     setSelected(new Set())
   }
 
@@ -238,22 +250,41 @@ export function ReviewView() {
 
   const blockCount = candidates.filter((c) => c.verdict === 'block').length
   const reviewCount = candidates.filter((c) => c.verdict === 'review').length
+  const fill = (v: number) => ({ '--sd-fill': `${v * 100}%` }) as CSSProperties
 
   return (
-    <div className="grid gap-4">
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+    <div className="grid gap-4 pb-2">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="候选" value={candidates.length} />
         <Stat label="建议拉黑" value={blockCount} tone="accent" />
         <Stat label="待复核" value={reviewCount} tone="warn" />
-        <Stat label="已选" value={selected.size} />
+        <Stat label="已选" value={selected.size} tone={selected.size ? 'ink' : 'dim'} />
       </div>
 
       <Panel title="阈值">
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="mb-5 flex h-7 overflow-hidden rounded-md border border-line text-[10.5px]">
+          <div className="flex items-center justify-center text-faint" style={{ width: `${thresholds.review * 100}%` }}>
+            忽略
+          </div>
+          <div
+            className="flex items-center justify-center border-x border-line bg-warn/[0.09] text-warn"
+            style={{ width: `${(thresholds.block - thresholds.review) * 100}%` }}
+          >
+            复核
+          </div>
+          <div
+            className="flex items-center justify-center bg-accent/[0.12] text-accent"
+            style={{ width: `${(1 - thresholds.block) * 100}%` }}
+          >
+            拉黑
+          </div>
+        </div>
+
+        <div className="grid gap-6 sm:grid-cols-2">
           <div>
-            <div className="mb-1.5 flex justify-between text-[12px]">
-              <span className="text-dim">拉黑线</span>
-              <span className="sd-mono text-faint">{thresholds.block.toFixed(2)}</span>
+            <div className="mb-2 flex items-baseline justify-between">
+              <span className="text-[12px] font-medium text-dim">拉黑线</span>
+              <span className="sd-mono text-[15px] text-ink">{thresholds.block.toFixed(2)}</span>
             </div>
             <input
               type="range"
@@ -262,13 +293,14 @@ export function ReviewView() {
               step={0.01}
               value={thresholds.block}
               onChange={(e) => changeThresholds({ block: Number(e.target.value) })}
-              className="h-1 w-full cursor-pointer appearance-none bg-line2 accent-[#6ee7a8]"
+              className="sd-range"
+              style={fill((thresholds.block - 0.5) / 0.45)}
             />
           </div>
           <div>
-            <div className="mb-1.5 flex justify-between text-[12px]">
-              <span className="text-dim">复核线</span>
-              <span className="sd-mono text-faint">{thresholds.review.toFixed(2)}</span>
+            <div className="mb-2 flex items-baseline justify-between">
+              <span className="text-[12px] font-medium text-dim">复核线</span>
+              <span className="sd-mono text-[15px] text-ink">{thresholds.review.toFixed(2)}</span>
             </div>
             <input
               type="range"
@@ -277,7 +309,8 @@ export function ReviewView() {
               step={0.01}
               value={thresholds.review}
               onChange={(e) => changeThresholds({ review: Number(e.target.value) })}
-              className="h-1 w-full cursor-pointer appearance-none bg-line2 accent-[#6ee7a8]"
+              className="sd-range"
+              style={fill((thresholds.review - 0.2) / 0.5)}
             />
           </div>
         </div>
@@ -285,18 +318,26 @@ export function ReviewView() {
 
       <Panel
         title="候选"
+        count={`${shown.length}/${candidates.length}`}
+        flush
         right={
-          <div className="flex items-center gap-2">
-            <Btn tone="ghost" onClick={selectAll}>
+          <>
+            <Segmented
+              value={filter}
+              onChange={setFilter}
+              options={[
+                { value: 'all', label: '全部' },
+                { value: 'block', label: '建议拉黑' },
+                { value: 'review', label: '待复核' },
+              ]}
+            />
+            <Btn size="sm" variant="ghost" onClick={selectAll}>
               {selected.size === shown.length && shown.length > 0 ? '取消全选' : '全选'}
             </Btn>
-            <Btn tone="ghost" onClick={() => setFilter(filter === 'all' ? 'block' : filter === 'block' ? 'review' : 'all')}>
-              {filter === 'all' ? '全部' : filter === 'block' ? '建议拉黑' : '待复核'}
-            </Btn>
-          </div>
+          </>
         }
       >
-        <div className="-mx-4 -mb-4 border-t border-line">
+        <div className="border-t border-line">
           {shown.length === 0 ? (
             <Empty>无匹配</Empty>
           ) : (
@@ -305,12 +346,8 @@ export function ReviewView() {
         </div>
       </Panel>
 
-      <div className="sticky bottom-0 flex flex-wrap items-center gap-2 border border-line bg-panel/95 px-4 py-3 backdrop-blur">
-        <Btn
-          tone="primary"
-          disabled={busy || selected.size === 0}
-          onClick={() => execute([...selected])}
-        >
+      <div className="sticky bottom-4 z-10 flex flex-wrap items-center gap-2 rounded-lg border border-line2 bg-panel/90 px-3 py-2.5 shadow-[0_12px_32px_rgb(0_0_0/0.55)] backdrop-blur-xl">
+        <Btn variant="primary" disabled={busy || selected.size === 0} onClick={() => execute([...selected])}>
           拉黑选中 {selected.size ? `(${selected.size})` : ''}
         </Btn>
         <Btn
@@ -319,26 +356,36 @@ export function ReviewView() {
         >
           拉黑全部建议 {blockCount ? `(${blockCount})` : ''}
         </Btn>
-        <Btn disabled={busy || selected.size === 0} onClick={ignoreSelected}>
+        <span className="mx-1 h-5 w-px bg-line2" />
+        <Btn variant="ghost" disabled={busy || selected.size === 0} onClick={ignoreSelected}>
           忽略
         </Btn>
-        <Btn disabled={busy || selected.size === 0} onClick={allowSelected}>
+        <Btn variant="ghost" disabled={busy || selected.size === 0} onClick={allowSelected}>
           放行
         </Btn>
         {llm.apiKey && (
           <>
-            <Btn disabled={busy} onClick={runArbitration}>
+            <span className="mx-1 h-5 w-px bg-line2" />
+            <Btn variant="ghost" disabled={busy} onClick={runArbitration}>
               AI 复核
             </Btn>
             <button
+              type="button"
               onClick={() => setSettings({ aiReview: !aiReview })}
-              className={`text-[11px] ${aiReview ? 'text-accent' : 'text-faint'}`}
+              className={cn(
+                'rounded-sm px-2 py-1 text-[11px] transition-colors',
+                aiReview ? 'text-accent' : 'text-faint hover:text-dim',
+              )}
             >
               自动复核 {aiReview ? '开' : '关'}
             </button>
           </>
         )}
-        <span className="ml-auto text-[11px] text-faint">{busy ? note : ''}</span>
+        {busy && note && (
+          <Alert tone="accent" className="ml-auto py-1">
+            {note}
+          </Alert>
+        )}
       </div>
     </div>
   )

@@ -1,33 +1,56 @@
 @import 'tailwindcss';
 
+/* ------------------------------------------------------------------ *
+ * 设计令牌
+ * 中性色偏冷、层次靠明度差拉开；强调色只用低饱和靛蓝，避免亮色喧宾夺主。
+ * ------------------------------------------------------------------ */
 @theme {
-  --color-ink: #e7e9ec;
-  --color-dim: #8b939c;
-  --color-faint: #565d66;
-  --color-line: #1e2126;
-  --color-line2: #2a2f36;
-  --color-bg: #0a0b0d;
-  --color-panel: #0f1114;
-  --color-raise: #14171b;
-  --color-accent: #6ee7a8;
-  --color-warn: #e8b339;
-  --color-danger: #f2555a;
+  --color-bg: #08090a;
+  --color-panel: #0d0e10;
+  --color-raise: #15171a;
+  --color-hover: #1c1f24;
+
+  --color-line: #1a1d21;
+  --color-line2: #272b31;
+
+  --color-ink: #f0f1f3;
+  --color-dim: #8b9096;
+  --color-faint: #6e747b;
+
+  --color-accent: #7d88ea;
+  --color-warn: #d9a441;
+  --color-danger: #e0575c;
+  --color-ok: #4cb782;
+
+  --radius-sm: 5px;
+  --radius-md: 7px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+
   --font-mono: ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, Consolas, monospace;
 }
 
-/* 脚本环境下宿主是全屏覆盖层，默认不拦截页面点击。 */
+/* 脚本模式下宿主是全屏覆盖层，默认不拦截页面点击。
+   自定义属性需与 @theme 保持一致：Tailwind 的主题变量挂在 :root/:host 上，
+   但宿主页面的 :root 不属于本样式表作用域，这里显式兜底一次。 */
 :host {
-  --color-ink: #e7e9ec;
-  --color-dim: #8b939c;
-  --color-faint: #565d66;
-  --color-line: #1e2126;
-  --color-line2: #2a2f36;
-  --color-bg: #0a0b0d;
-  --color-panel: #0f1114;
-  --color-raise: #14171b;
-  --color-accent: #6ee7a8;
-  --color-warn: #e8b339;
-  --color-danger: #f2555a;
+  --color-bg: #08090a;
+  --color-panel: #0d0e10;
+  --color-raise: #15171a;
+  --color-hover: #1c1f24;
+  --color-line: #1a1d21;
+  --color-line2: #272b31;
+  --color-ink: #f0f1f3;
+  --color-dim: #8b9096;
+  --color-faint: #6e747b;
+  --color-accent: #7d88ea;
+  --color-warn: #d9a441;
+  --color-danger: #e0575c;
+  --color-ok: #4cb782;
+  --radius-sm: 5px;
+  --radius-md: 7px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
   --font-mono: ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, Consolas, monospace;
 
   all: initial;
@@ -36,112 +59,347 @@
   z-index: 2147483000;
   display: block;
   pointer-events: none;
+  color-scheme: dark;
 }
 
-/* 作用域内的最小重置：宿主页面样式不穿透，也不污染宿主页面。 */
-.sd-root,
-.sd-root *,
-.sd-root *::before,
-.sd-root *::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-  border: 0 solid var(--color-line);
-  font: inherit;
-  color: inherit;
-  background: transparent;
-  line-height: 1.5;
-  letter-spacing: 0;
-  text-align: left;
-  list-style: none;
+/* ------------------------------------------------------------------ *
+ * 基础层
+ *
+ * 必须放在 @layer base 内。若写成非分层规则，其优先级会高于
+ * @layer utilities，导致 Tailwind 的边框、背景、圆角全部失效。
+ * ------------------------------------------------------------------ */
+@layer base {
+  .sd-root,
+  .sd-root *,
+  .sd-root *::before,
+  .sd-root *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    border: 0 solid var(--color-line);
+  }
+
+  .sd-root {
+    font-family: Inter, system-ui, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    font-size: 13px;
+    line-height: 1.55;
+    letter-spacing: -0.003em;
+    color: var(--color-ink);
+    color-scheme: dark;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  .sd-root h1,
+  .sd-root h2,
+  .sd-root h3,
+  .sd-root h4 {
+    font-size: inherit;
+    font-weight: inherit;
+  }
+
+  .sd-root button,
+  .sd-root input,
+  .sd-root select,
+  .sd-root textarea {
+    font: inherit;
+    color: inherit;
+    background: transparent;
+  }
+
+  .sd-root button {
+    cursor: pointer;
+  }
+
+  .sd-root button:disabled {
+    cursor: not-allowed;
+  }
+
+  .sd-root a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .sd-root ul,
+  .sd-root ol {
+    list-style: none;
+  }
+
+  .sd-root input,
+  .sd-root textarea,
+  .sd-root select,
+  .sd-root button {
+    outline: none;
+  }
+
+  .sd-root input::placeholder,
+  .sd-root textarea::placeholder {
+    color: var(--color-faint);
+  }
+
+  .sd-root input[type='number']::-webkit-outer-spin-button,
+  .sd-root input[type='number']::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  .sd-root input[type='number'] {
+    -moz-appearance: textfield;
+  }
+
+  .sd-root ::selection {
+    background: color-mix(in oklab, var(--color-accent) 32%, transparent);
+    color: var(--color-ink);
+  }
+
+  .sd-root ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  .sd-root ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .sd-root ::-webkit-scrollbar-thumb {
+    background: var(--color-line2);
+    border: 3px solid transparent;
+    background-clip: content-box;
+    border-radius: 999px;
+  }
+
+  .sd-root ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-faint);
+    background-clip: content-box;
+  }
 }
 
-.sd-root {
-  font-family:
-    system-ui,
-    -apple-system,
-    'Segoe UI',
-    'PingFang SC',
-    'Microsoft YaHei',
-    sans-serif;
-  font-size: 13px;
-  color: var(--color-ink);
-}
+/* ------------------------------------------------------------------ *
+ * 组件层
+ * ------------------------------------------------------------------ */
+@layer components {
+  /* 页面底色：顶部一层极淡的冷光，加一层会被渐隐掉的网格线 */
+  .sd-page,
+  .sd-overlay {
+    position: relative;
+    background-color: var(--color-bg);
+  }
 
-/* 独立页面模式 */
-.sd-page {
-  min-height: 100vh;
-  background: var(--color-bg);
-}
+  .sd-page::before,
+  .sd-overlay::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 460px;
+    pointer-events: none;
+    background-image:
+      linear-gradient(to right, var(--color-line) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--color-line) 1px, transparent 1px);
+    background-size: 44px 44px;
+    -webkit-mask-image: radial-gradient(90% 100% at 50% 0%, #000 0%, transparent 72%);
+    mask-image: radial-gradient(90% 100% at 50% 0%, #000 0%, transparent 72%);
+    opacity: 0.75;
+  }
 
-/* 覆盖层模式 */
-.sd-overlay {
-  position: absolute;
-  inset: 0;
-  overflow: auto;
-  pointer-events: auto;
-  background: var(--color-bg);
-}
+  .sd-page::after,
+  .sd-overlay::after {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 380px;
+    pointer-events: none;
+    background: radial-gradient(70% 100% at 50% 0%, color-mix(in oklab, var(--color-accent) 9%, transparent), transparent 70%);
+  }
 
-.sd-launcher {
-  position: absolute;
-  right: 20px;
-  bottom: 20px;
-  pointer-events: auto;
-  border: 1px solid var(--color-line2);
-  background: var(--color-panel);
-  color: var(--color-dim);
-  padding: 6px 12px;
-  font-size: 12px;
-  letter-spacing: 0.1em;
-  cursor: pointer;
-  transition: color 0.15s, border-color 0.15s;
-}
-.sd-launcher:hover {
-  color: var(--color-accent);
-  border-color: var(--color-accent);
-}
+  /* 面板：发丝描边 + 顶部高光 + 极浅投影，靠明度而非颜色分层 */
+  .sd-panel {
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-lg);
+    background-color: var(--color-panel);
+    background-image: linear-gradient(180deg, rgb(255 255 255 / 0.032), rgb(255 255 255 / 0) 110px);
+    box-shadow:
+      0 1px 2px rgb(0 0 0 / 0.45),
+      0 0 0 0.5px rgb(0 0 0 / 0.3),
+      inset 0 1px 0 rgb(255 255 255 / 0.04);
+  }
 
-.sd-root input,
-.sd-root textarea,
-.sd-root select,
-.sd-root button {
-  font-family: inherit;
-  outline: none;
-}
+  /* 凹陷面：输入框、进度槽、代码块 */
+  .sd-inset {
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-md);
+    background-color: var(--color-raise);
+    box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.4);
+  }
 
-.sd-root input::placeholder,
-.sd-root textarea::placeholder {
-  color: var(--color-faint);
-}
+  .sd-focusable:focus-visible {
+    border-color: color-mix(in oklab, var(--color-accent) 55%, transparent);
+    box-shadow:
+      0 0 0 3px color-mix(in oklab, var(--color-accent) 16%, transparent),
+      inset 0 1px 2px rgb(0 0 0 / 0.4);
+  }
 
-.sd-root input[type='range'] {
-  -webkit-appearance: none;
-  appearance: none;
-  height: 2px;
-  background: var(--color-line2);
-}
-.sd-root input[type='range']::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 10px;
-  height: 14px;
-  background: var(--color-accent);
-  cursor: pointer;
-}
+  /* 主操作：低饱和靛蓝薄染 + 描边，克制但有明确指向 */
+  .sd-primary {
+    border-color: color-mix(in oklab, var(--color-accent) 42%, transparent);
+    background-color: color-mix(in oklab, var(--color-accent) 15%, transparent);
+    background-image: linear-gradient(180deg, rgb(255 255 255 / 0.07), rgb(255 255 255 / 0));
+    color: var(--color-accent);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06);
+  }
+  .sd-primary:hover:not(:disabled) {
+    background-color: color-mix(in oklab, var(--color-accent) 24%, transparent);
+    border-color: color-mix(in oklab, var(--color-accent) 60%, transparent);
+  }
 
-.sd-root ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-.sd-root ::-webkit-scrollbar-thumb {
-  background: var(--color-line2);
-}
-.sd-root ::-webkit-scrollbar-track {
-  background: transparent;
+  .sd-danger {
+    border-color: color-mix(in oklab, var(--color-danger) 40%, transparent);
+    background-color: color-mix(in oklab, var(--color-danger) 13%, transparent);
+    color: var(--color-danger);
+  }
+  .sd-danger:hover:not(:disabled) {
+    background-color: color-mix(in oklab, var(--color-danger) 22%, transparent);
+  }
+
+  /* 滑杆：用 --sd-fill 画出已选区间 */
+  .sd-range {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 18px;
+    background: transparent;
+    cursor: pointer;
+  }
+  .sd-range::-webkit-slider-runnable-track {
+    height: 4px;
+    border-radius: 999px;
+    background: linear-gradient(
+      to right,
+      var(--color-accent) var(--sd-fill, 50%),
+      var(--color-line2) var(--sd-fill, 50%)
+    );
+  }
+  .sd-range::-moz-range-track {
+    height: 4px;
+    border-radius: 999px;
+    background: var(--color-line2);
+  }
+  .sd-range::-moz-range-progress {
+    height: 4px;
+    border-radius: 999px;
+    background: var(--color-accent);
+  }
+  .sd-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    margin-top: -4px;
+    border-radius: 999px;
+    background: var(--color-ink);
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.6);
+    transition: box-shadow 0.12s;
+  }
+  .sd-range::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--color-ink);
+  }
+  .sd-range:hover::-webkit-slider-thumb {
+    box-shadow: 0 0 0 5px color-mix(in oklab, var(--color-accent) 18%, transparent);
+  }
+  .sd-range:focus-visible::-webkit-slider-thumb {
+    box-shadow: 0 0 0 5px color-mix(in oklab, var(--color-accent) 30%, transparent);
+  }
+
+  /* 进度条：填充段带一点渐变，扫描中叠加流动高光 */
+  .sd-progress {
+    height: 6px;
+    border-radius: 999px;
+    background: var(--color-line);
+    overflow: hidden;
+  }
+  .sd-progress-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, color-mix(in oklab, var(--color-accent) 65%, transparent), var(--color-accent));
+    transition: width 0.3s ease;
+  }
+  .sd-progress-live {
+    background-image: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgb(255 255 255 / 0.22) 50%,
+      transparent 100%
+    );
+    background-size: 40% 100%;
+    background-repeat: no-repeat;
+    animation: sd-sheen 1.4s linear infinite;
+  }
+
+  @keyframes sd-sheen {
+    from {
+      background-position: -40% 0;
+    }
+    to {
+      background-position: 140% 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sd-progress-live {
+      animation: none;
+    }
+  }
+
+  /* 发丝分隔线，两端渐隐 */
+  .sd-rule {
+    height: 1px;
+    background: linear-gradient(to right, transparent, var(--color-line2) 12%, var(--color-line2) 88%, transparent);
+  }
+
+  .sd-launcher {
+    position: absolute;
+    right: 20px;
+    bottom: 20px;
+    pointer-events: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 13px 7px 11px;
+    font-size: 12px;
+    letter-spacing: 0.02em;
+    color: var(--color-dim);
+    border: 1px solid var(--color-line2);
+    border-radius: 999px;
+    background-color: var(--color-panel);
+    background-image: linear-gradient(180deg, rgb(255 255 255 / 0.05), rgb(255 255 255 / 0));
+    box-shadow:
+      0 4px 16px rgb(0 0 0 / 0.5),
+      inset 0 1px 0 rgb(255 255 255 / 0.05);
+    transition:
+      color 0.15s,
+      border-color 0.15s,
+      transform 0.15s;
+  }
+  .sd-launcher:hover {
+    color: var(--color-ink);
+    border-color: color-mix(in oklab, var(--color-accent) 45%, transparent);
+    transform: translateY(-1px);
+  }
+  .sd-launcher-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--color-accent);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-accent) 18%, transparent);
+  }
 }
 
 .sd-mono {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
 }

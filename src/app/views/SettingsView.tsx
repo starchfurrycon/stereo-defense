@@ -1,8 +1,7 @@
-import { Btn, Field, Panel, Select, TextInput, Toggle } from '../ui'
+import { Btn, Field, Panel, Row, Rows, Select, Switch, TextInput } from '../ui'
 import { useStore } from '../../lib/store'
 import { setProxyPrefix } from '../../lib/bili/transport'
 import { lookupPrice } from '../../lib/llm/pricing'
-import { MODEL_ID } from '../../lib/analyze/embed'
 
 const PRESETS = [
   { label: 'OpenAI', url: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
@@ -12,7 +11,9 @@ const PRESETS = [
   { label: '月之暗面', url: 'https://api.moonshot.cn/v1', model: 'moonshot-v1-8k' },
   { label: 'OpenRouter', url: 'https://openrouter.ai/api/v1', model: 'openai/gpt-4o-mini' },
   { label: '自定义', url: '', model: '' },
-]
+] as const
+
+type PresetLabel = (typeof PRESETS)[number]['label']
 
 export function SettingsView() {
   const settings = useStore((s) => s.settings)
@@ -21,45 +22,42 @@ export function SettingsView() {
   const usage = useStore((s) => s.usage)
 
   const price = lookupPrice(settings.llm.model)
+  const preset: PresetLabel = PRESETS.find((p) => p.url === settings.llm.baseUrl)?.label ?? '自定义'
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <Panel title="模型">
-        <div className="grid gap-3">
+        <div className="grid gap-4">
           <Field label="服务">
             <Select
-              value={PRESETS.find((p) => p.url === settings.llm.baseUrl)?.label ?? '自定义'}
-              onChange={(e) => {
-                const p = PRESETS.find((x) => x.label === e.target.value)
+              value={preset}
+              options={PRESETS.map((p) => ({ value: p.label, label: p.label }))}
+              onChange={(label) => {
+                const p = PRESETS.find((x) => x.label === label)
                 if (p && p.url) setLlm({ baseUrl: p.url, model: p.model })
               }}
-            >
-              {PRESETS.map((p) => (
-                <option key={p.label} value={p.label}>
-                  {p.label}
-                </option>
-              ))}
-            </Select>
-          </Field>
-          <Field label="地址">
-            <TextInput
-              value={settings.llm.baseUrl}
-              onChange={(e) => setLlm({ baseUrl: e.target.value })}
-              spellCheck={false}
             />
           </Field>
+
+          <Field label="地址">
+            <TextInput value={settings.llm.baseUrl} onChange={(e) => setLlm({ baseUrl: e.target.value })} spellCheck={false} />
+          </Field>
+
           <Field label="密钥">
             <TextInput
               type="password"
               value={settings.llm.apiKey}
               onChange={(e) => setLlm({ apiKey: e.target.value })}
               spellCheck={false}
+              autoComplete="off"
             />
           </Field>
+
           <Field label="模型">
             <TextInput value={settings.llm.model} onChange={(e) => setLlm({ model: e.target.value })} spellCheck={false} />
           </Field>
-          <div className="grid grid-cols-2 gap-3">
+
+          <div className="grid grid-cols-2 gap-4">
             <Field label="输入单价" hint="$/百万">
               <TextInput
                 type="number"
@@ -79,20 +77,14 @@ export function SettingsView() {
               />
             </Field>
           </div>
+
           {usage && (
-            <div className="border border-line px-3 py-2 text-[12px]">
-              <div className="flex justify-between">
-                <span className="text-faint">输入</span>
-                <span className="sd-mono">{usage.promptTokens.toLocaleString()}</span>
-              </div>
-              <div className="mt-1 flex justify-between">
-                <span className="text-faint">输出</span>
-                <span className="sd-mono">{usage.completionTokens.toLocaleString()}</span>
-              </div>
-              <div className="mt-1 flex justify-between">
-                <span className="text-faint">调用</span>
-                <span className="sd-mono">{usage.calls}</span>
-              </div>
+            <div className="border-t border-line pt-4">
+              <Rows>
+                <Row label="输入">{usage.promptTokens.toLocaleString()}</Row>
+                <Row label="输出">{usage.completionTokens.toLocaleString()}</Row>
+                <Row label="调用">{usage.calls}</Row>
+              </Rows>
             </div>
           )}
         </div>
@@ -100,8 +92,8 @@ export function SettingsView() {
 
       <div className="grid content-start gap-4">
         <Panel title="通道">
-          <div className="grid gap-3">
-            <Field label="转发地址" hint="可选">
+          <div className="grid gap-4">
+            <Field label="转发地址">
               <TextInput
                 value={settings.proxy}
                 onChange={(e) => {
@@ -112,22 +104,20 @@ export function SettingsView() {
                 spellCheck={false}
               />
             </Field>
-            <Toggle
-              checked={settings.aiReview}
-              onChange={(v) => setSettings({ aiReview: v })}
-              label="边界候选自动复核"
-            />
+            <div className="border-t border-line pt-3">
+              <Switch
+                checked={settings.aiReview}
+                onChange={(v) => setSettings({ aiReview: v })}
+                label="边界候选自动复核"
+              />
+            </div>
           </div>
-        </Panel>
-
-        <Panel title="本地模型">
-          <div className="sd-mono text-[12px] break-all text-dim">{MODEL_ID}</div>
         </Panel>
 
         <Panel title="数据">
           <div className="flex flex-wrap gap-2">
             <Btn
-              tone="danger"
+              variant="danger"
               onClick={() => {
                 useStore.getState().reset()
                 useStore.getState().setCandidates([])
@@ -137,7 +127,7 @@ export function SettingsView() {
               清空扫描结果
             </Btn>
             <Btn
-              tone="danger"
+              variant="danger"
               onClick={() => {
                 useStore.getState().setBlacklist([])
                 useStore.getState().setProfile(null)

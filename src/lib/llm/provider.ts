@@ -19,10 +19,6 @@ export const DEFAULT_LLM: LlmConfig = {
   temperature: 0.2,
 }
 
-export function emptyUsage(): Usage {
-  return { promptTokens: 0, completionTokens: 0, totalTokens: 0, calls: 0, costUsd: 0, authoritative: true }
-}
-
 const CJK_RE = /[\u3400-\u9fff\uf900-\ufaff\u3040-\u30ff\uac00-\ud7af]/
 
 /**

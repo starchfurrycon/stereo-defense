@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import { Btn, Field, Panel, Tag, TextArea, Toggle } from '../ui'
+import { Btn, Field, Panel, Tag, TextArea } from '../ui'
 import { useStore } from '../../lib/store'
 import { buildLocalProfile } from '../../lib/analyze/local'
-import { embedStatus, loadEmbedder, onEmbedStatus } from '../../lib/analyze/embed'
+import { embedStatus, loadEmbedder, MODEL_ID, onEmbedStatus } from '../../lib/analyze/embed'
 import { generateProfile } from '../../lib/llm/provider'
 import { PROFILE_SYSTEM, profileUserPrompt } from '../../lib/llm/prompt'
 import { formatCost } from '../../lib/llm/pricing'
@@ -160,12 +160,22 @@ export function ProfileView() {
       )}
 
       {!useLlm && profile && (
-        <Panel title="本地引擎">
-          <Toggle
-            checked
-            onChange={() => void 0}
-            label={embed === 'ready' ? '语义模型已加载' : embed === 'unavailable' ? '语义模型不可用' : '按需加载语义模型'}
-          />
+        <Panel
+          title="本地引擎"
+          right={
+            embed === 'idle' ? (
+              <Btn onClick={() => void loadEmbedder()} disabled={busy}>
+                加载语义模型
+              </Btn>
+            ) : undefined
+          }
+        >
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[12px]">
+            <span className="sd-mono text-dim">{MODEL_ID}</span>
+            <span className={embed === 'ready' ? 'text-accent' : embed === 'unavailable' ? 'text-warn' : 'text-faint'}>
+              {embed === 'ready' ? '已加载' : embed === 'unavailable' ? '不可用，已降级为词表匹配' : embed === 'loading' ? '加载中' : '未加载'}
+            </span>
+          </div>
         </Panel>
       )}
     </div>

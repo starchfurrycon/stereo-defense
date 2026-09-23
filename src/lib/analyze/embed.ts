@@ -7,7 +7,6 @@
  */
 
 export const MODEL_ID = 'onnx-community/bge-small-zh-v1.5-ONNX'
-export const MODEL_SIZE_HINT = '约 30MB'
 
 const RUNTIME_CDNS = [
   'https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.3.0/+esm',

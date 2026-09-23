@@ -111,13 +111,3 @@ export interface BlackEntry {
   /** 执行时该账号的得分 */
   score?: number
 }
-
-export interface RunStats {
-  startedAt: number
-  finishedAt?: number
-  requests: number
-  candidates: number
-  blocked: number
-  failed: number
-  phase: string
-}

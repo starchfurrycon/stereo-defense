@@ -37,7 +37,6 @@ const UA =
 export const limiter = new RateLimiter(1, 1200)
 
 let proxyPrefix = ''
-let modeOverride: TransportMode | null = null
 let requestCounter = 0
 let lastError = ''
 
@@ -45,12 +44,7 @@ export function setProxyPrefix(prefix: string): void {
   proxyPrefix = prefix.trim().replace(/\/+$/, '')
 }
 
-export function setTransportMode(mode: TransportMode | null): void {
-  modeOverride = mode
-}
-
 export function transportMode(): TransportMode {
-  if (modeOverride) return modeOverride
   if (typeof GM_xmlhttpRequest === 'function') return 'userscript'
   if (proxyPrefix) return 'proxy'
   return 'fetch'
@@ -62,10 +56,6 @@ export function transportError(): string {
 
 export function requestCount(): number {
   return requestCounter
-}
-
-export function resetRequestCount(): void {
-  requestCounter = 0
 }
 
 function buildUrl(url: string): string {

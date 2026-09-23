@@ -507,16 +507,6 @@ export async function fetchVideoReplies(oid: number, upMid = 0, maxPages = 2, ty
   return out
 }
 
-/** 评论总数，免签免登录。 */
-export async function fetchReplyCount(oid: number, type = 1): Promise<number> {
-  try {
-    const data = await plainGet<{ count: number }>('/x/v2/reply/count', { oid, type })
-    return data?.count ?? 0
-  } catch {
-    return 0
-  }
-}
-
 /**
  * 第三方评论索引（aicu.cc）。
  * B 站官方不提供「按 mid 查全站评论」，这是唯一能覆盖历史评论的途径，
@@ -704,42 +694,5 @@ export async function fetchBlacklist(pn = 1, ps = 50): Promise<{ list: BlackEntr
       mtime: Number(e.mtime ?? 0),
     })),
     total: data.total ?? (data.list ?? []).length,
-  }
-}
-
-/* ------------------------------------------------------------------ */
-/* 稿件详情                                                            */
-/* ------------------------------------------------------------------ */
-
-export interface VideoDetail {
-  aid: number
-  bvid: string
-  title: string
-  desc: string
-  ownerMid: number
-  ownerName: string
-  tname: string
-  pubdate: number
-}
-
-export async function fetchVideoDetail(bvid: string): Promise<VideoDetail> {
-  const data = await plainGet<{
-    aid: number
-    bvid: string
-    title: string
-    desc: string
-    owner: { mid: number; name: string }
-    tname: string
-    pubdate: number
-  }>('/x/web-interface/view', { bvid }, `https://www.bilibili.com/video/${bvid}`)
-  return {
-    aid: data.aid,
-    bvid: data.bvid,
-    title: data.title,
-    desc: data.desc,
-    ownerMid: data.owner?.mid ?? 0,
-    ownerName: data.owner?.name ?? '',
-    tname: data.tname ?? '',
-    pubdate: data.pubdate ?? 0,
   }
 }

@@ -74,12 +74,3 @@ export function extractKeywords(text: string, limit = 24): SegmentResult {
   }
   return { keywords, tokens }
 }
-
-/** 把长文本切成便于打分的片段。 */
-export function splitClauses(text: string, max = 400): string[] {
-  return text
-    .split(/[\n\r。！？!?；;]+/)
-    .map((s) => s.trim())
-    .filter((s) => s.length >= 4)
-    .slice(0, max)
-}

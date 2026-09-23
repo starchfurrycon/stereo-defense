@@ -141,9 +141,10 @@ export function ReviewView() {
       else next.block = Math.min(1, next.review + 0.05)
     }
     setThresholds(next)
-    setCandidates(candidates.map((c) => ({ ...c })))
-    applyThresholds(useStore.getState().candidates, next)
-    setCandidates([...useStore.getState().candidates])
+    // 复制一份再重新判定，避免直接改动 store 里的对象
+    const updated = candidates.map((c) => ({ ...c }))
+    applyThresholds(updated, next)
+    setCandidates(updated)
   }
 
   const runArbitration = async () => {

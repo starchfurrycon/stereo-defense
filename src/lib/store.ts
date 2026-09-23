@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage, type StateStorage } from 'zustand/middleware'
-import { DEFAULT_LLM, type LlmConfig } from './llm/provider'
+import { DEFAULT_LLM, mergeUsage, type LlmConfig } from './llm/provider'
 import { DEFAULT_BUDGET, type ScanBudget } from './scan'
 import { DEFAULT_THRESHOLDS, type Thresholds } from './analyze/score'
 import type { BlackEntry, Candidate, Profile, Usage } from './types'
@@ -112,18 +112,7 @@ export const useStore = create<State>()(
       addUsage: (u) => {
         if (!u) return
         const prev = get().usage
-        set({
-          usage: prev
-            ? {
-                promptTokens: prev.promptTokens + u.promptTokens,
-                completionTokens: prev.completionTokens + u.completionTokens,
-                totalTokens: prev.totalTokens + u.totalTokens,
-                calls: prev.calls + u.calls,
-                costUsd: prev.costUsd + u.costUsd,
-                authoritative: prev.authoritative && u.authoritative,
-              }
-            : u,
-        })
+        set({ usage: prev ? mergeUsage(prev, u) : u })
       },
       reset: () => set({ candidates: [], profile: null, usage: null, ignored: [] }),
     }),

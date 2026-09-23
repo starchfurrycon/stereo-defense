@@ -1,0 +1,32 @@
+{
+  "name": "stereo-defense",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "立体防御 — B 站多源画像范围拉黑工具",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:web": "vite build --config vite.config.web.ts",
+    "build:all": "pnpm run build && pnpm run build:web",
+    "preview": "vite preview --config vite.config.web.ts",
+    "smoke": "node scripts/smoke.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "zustand": "^5.0.15"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.1",
+    "puppeteer-core": "^25.11.0",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^5.9.3",
+    "vite": "^8.3.0",
+    "vite-plugin-monkey": "^8.1.1"
+  }
+}

@@ -1,0 +1,147 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-ink: #e7e9ec;
+  --color-dim: #8b939c;
+  --color-faint: #565d66;
+  --color-line: #1e2126;
+  --color-line2: #2a2f36;
+  --color-bg: #0a0b0d;
+  --color-panel: #0f1114;
+  --color-raise: #14171b;
+  --color-accent: #6ee7a8;
+  --color-warn: #e8b339;
+  --color-danger: #f2555a;
+  --font-mono: ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, Consolas, monospace;
+}
+
+/* 脚本环境下宿主是全屏覆盖层，默认不拦截页面点击。 */
+:host {
+  --color-ink: #e7e9ec;
+  --color-dim: #8b939c;
+  --color-faint: #565d66;
+  --color-line: #1e2126;
+  --color-line2: #2a2f36;
+  --color-bg: #0a0b0d;
+  --color-panel: #0f1114;
+  --color-raise: #14171b;
+  --color-accent: #6ee7a8;
+  --color-warn: #e8b339;
+  --color-danger: #f2555a;
+  --font-mono: ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, Consolas, monospace;
+
+  all: initial;
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  display: block;
+  pointer-events: none;
+}
+
+/* 作用域内的最小重置：宿主页面样式不穿透，也不污染宿主页面。 */
+.sd-root,
+.sd-root *,
+.sd-root *::before,
+.sd-root *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  border: 0 solid var(--color-line);
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  line-height: 1.5;
+  letter-spacing: 0;
+  text-align: left;
+  list-style: none;
+}
+
+.sd-root {
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    'PingFang SC',
+    'Microsoft YaHei',
+    sans-serif;
+  font-size: 13px;
+  color: var(--color-ink);
+}
+
+/* 独立页面模式 */
+.sd-page {
+  min-height: 100vh;
+  background: var(--color-bg);
+}
+
+/* 覆盖层模式 */
+.sd-overlay {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  pointer-events: auto;
+  background: var(--color-bg);
+}
+
+.sd-launcher {
+  position: absolute;
+  right: 20px;
+  bottom: 20px;
+  pointer-events: auto;
+  border: 1px solid var(--color-line2);
+  background: var(--color-panel);
+  color: var(--color-dim);
+  padding: 6px 12px;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.sd-launcher:hover {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.sd-root input,
+.sd-root textarea,
+.sd-root select,
+.sd-root button {
+  font-family: inherit;
+  outline: none;
+}
+
+.sd-root input::placeholder,
+.sd-root textarea::placeholder {
+  color: var(--color-faint);
+}
+
+.sd-root input[type='range'] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 2px;
+  background: var(--color-line2);
+}
+.sd-root input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 10px;
+  height: 14px;
+  background: var(--color-accent);
+  cursor: pointer;
+}
+
+.sd-root ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.sd-root ::-webkit-scrollbar-thumb {
+  background: var(--color-line2);
+}
+.sd-root ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sd-mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}

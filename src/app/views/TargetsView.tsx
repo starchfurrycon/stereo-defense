@@ -35,6 +35,7 @@ export function TargetsView() {
   const setMode = useStore((s) => s.setMode)
   const setPreset = useStore((s) => s.setPreset)
   const setTargets = useStore((s) => s.setTargets)
+  const setSettings = useStore((s) => s.setSettings)
   const setTab = useStore((s) => s.setTab)
   const [advanced, setAdvanced] = useState(false)
 
@@ -50,7 +51,22 @@ export function TargetsView() {
     <div className="grid gap-4">
       <Panel
         title="力度"
-        right={<Tag tone="dim">{blockFamilies.length} 类会自动建议拉黑</Tag>}
+        right={
+          <>
+            <Tag tone="dim">{blockFamilies.length} 类会自动建议拉黑</Tag>
+            <Btn
+              variant="primary"
+              onClick={() => {
+                setPreset('aggressive')
+                setSettings({ autoBlock: true })
+                useStore.getState().setAutoRun(true)
+                setTab('scan')
+              }}
+            >
+              一键执行
+            </Btn>
+          </>
+        }
       >
         <div className="flex flex-wrap items-center gap-3">
           <Segmented
@@ -89,6 +105,11 @@ export function TargetsView() {
           <Btn size="sm" variant="ghost" onClick={() => setTab('settings')}>
             看误伤细节
           </Btn>
+        </div>
+
+        <div className="mt-3 rounded-md border border-accent/25 bg-accent/[0.05] px-3 py-2 text-[11.5px] leading-relaxed text-dim">
+          <span className="text-accent">一键执行</span> = 八类全开 + 激进 + 扫描完直接拉黑建议项。
+          适用于「我不想看，直接清干净」；想先看证据就自己点「扫描」，复核后再拉。
         </div>
       </Panel>
 

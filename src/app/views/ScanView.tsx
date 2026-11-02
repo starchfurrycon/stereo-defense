@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Alert, Btn, Empty, Field, NumberInput, Panel, Progress, Stat, Switch, Tag, cn } from '../ui'
 import { useStore } from '../../lib/store'
 import { DEFAULT_BUDGET, isAborted, runScan, type ScanProgress } from '../../lib/scan'
@@ -38,6 +38,8 @@ export function ScanView() {
   const setTab = useStore((s) => s.setTab)
   const setCandidates = useStore((s) => s.setCandidates)
   const addBlacklist = useStore((s) => s.addBlacklist)
+  const autoRun = useStore((s) => s.autoRun)
+  const setAutoRun = useStore((s) => s.setAutoRun)
   const candidates = useStore((s) => s.candidates)
   const blacklist = useStore((s) => s.blacklist)
   const ignored = useStore((s) => s.ignored)
@@ -141,6 +143,16 @@ export function ScanView() {
       abortRef.current = null
     }
   }
+
+  // 「目标」页点「一键执行」后，这里自动开跑
+  const autoStarted = useRef(false)
+  useEffect(() => {
+    if (!autoRun || autoStarted.current) return
+    autoStarted.current = true
+    setAutoRun(false)
+    void start()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoRun])
 
   const pct = progress && progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0
   const blocked = candidates.filter((c) => c.verdict === 'block').length

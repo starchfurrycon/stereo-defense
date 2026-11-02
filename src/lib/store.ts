@@ -99,6 +99,9 @@ interface State {
   /** 上一次批量拉黑的 mid，用于一键撤销 */
   lastBatch: number[]
   setLastBatch: (mids: number[]) => void
+  /** 一次性开关：从「目标」页点一键执行后，扫描页自动开跑 */
+  autoRun: boolean
+  setAutoRun: (v: boolean) => void
   setSettings: (patch: Partial<Settings>) => void
   setLlm: (patch: Partial<LlmConfig>) => void
   setBudget: (patch: Partial<ScanBudget>) => void
@@ -151,6 +154,8 @@ export const useStore = create<State>()(
       lastScan: 0,
       lastBatch: [],
       setLastBatch: (mids) => set({ lastBatch: mids }),
+      autoRun: false,
+      setAutoRun: (v) => set({ autoRun: v }),
       setSettings: (patch) => set({ settings: { ...get().settings, ...patch } }),
       setLlm: (patch) => set({ settings: { ...get().settings, llm: { ...get().settings.llm, ...patch } } }),
       setBudget: (patch) => set({ settings: { ...get().settings, budget: { ...get().settings.budget, ...patch } } }),

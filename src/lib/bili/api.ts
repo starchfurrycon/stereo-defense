@@ -471,27 +471,45 @@ function toReply(raw: RawReply, upMid: number): ReplyItem | null {
 
 /**
  * 视频评论（含楼中楼）。
- * 签名版更稳定；未签名版目前可用但会被风控随机降级为 -352，故作为兜底。
- * 全站「按 mid 查评论」官方接口不存在，评论证据只能来自已扫描的评论区。
+ * 主路径是 wbi/main；WBI 失效时降级到免签的 /x/v2/reply/main 与旧接口。
+ * 全站「按 mid 查评论」官方接口不存在（实测多个路径均 404），
+ * 评论证据只能来自已扫描的评论区。
  */
-export async function fetchVideoReplies(oid: number, upMid = 0, maxPages = 2, type = 1): Promise<ReplyItem[]> {
+export async function fetchVideoReplies(oid: number, upMid = 0, maxPages = 2, type = 1, mode = 3): Promise<ReplyItem[]> {
   const out: ReplyItem[] = []
-  let next = 0
+  let offset = ''
+  const referer = `https://www.bilibili.com/video/av${oid}`
   for (let i = 0; i < maxPages; i++) {
-    const params = { oid, type, mode: 3, next, ps: 20, web_location: '1315875' }
-    let data: { replies: RawReply[] | null; cursor?: { is_end: boolean; next: number } }
+    // pagination_str 是「JSON 序列化后再当 query 参数」的双重编码结构
+    const params: Record<string, string | number> = {
+      oid,
+      type,
+      mode,
+      ps: 20,
+      plat: 1,
+      web_location: '1315875',
+      pagination_str: JSON.stringify({ offset }),
+    }
+    let data: {
+      replies: RawReply[] | null
+      cursor?: {
+        is_end: boolean
+        next: number
+        pagination_reply?: { next_offset?: string }
+      }
+    }
     try {
-      data = await signedGet(
-        '/x/v2/reply/wbi/main',
-        params,
-        `https://www.bilibili.com/video/av${oid}`,
-      )
+      data = await signedGet('/x/v2/reply/wbi/main', params, referer)
     } catch {
-      data = await plainGet(
-        '/x/v2/reply/main',
-        params,
-        `https://www.bilibili.com/video/av${oid}`,
-      )
+      try {
+        data = await plainGet('/x/v2/reply/main', params, referer)
+      } catch {
+        data = await plainGet(
+          '/x/v2/reply',
+          { oid, type, mode, pn: i + 1, ps: 20 },
+          referer,
+        )
+      }
     }
     for (const raw of data.replies ?? []) {
       const item = toReply(raw, upMid)
@@ -501,8 +519,9 @@ export async function fetchVideoReplies(oid: number, upMid = 0, maxPages = 2, ty
         if (s) out.push(s)
       }
     }
-    if (!data.cursor || data.cursor.is_end) break
-    next = data.cursor.next
+    const next = data.cursor?.pagination_reply?.next_offset
+    if (!next || data.cursor?.is_end) break
+    offset = next
   }
   return out
 }
@@ -694,5 +713,195 @@ export async function fetchBlacklist(pn = 1, ps = 50): Promise<{ list: BlackEntr
       mtime: Number(e.mtime ?? 0),
     })),
     total: data.total ?? (data.list ?? []).length,
+  }
+}
+
+/**
+ * 黑名单容量。
+ * 官方只给错误码 22008「黑名单达到上限」，不给日配额；
+ * 社区经验公式是 500 + floor(粉丝数/10000)*20，封顶 5000。
+ * 这里按保守口径提示，真实上限以接口报错为准。
+ */
+export function blockCapacity(_level: number, fans: number): number {
+  return Math.min(5000, 500 + Math.floor(Math.max(0, fans) / 10000) * 20)
+}
+
+/* ------------------------------------------------------------------ */
+/* 粉丝 / 关注者                                                       */
+/* ------------------------------------------------------------------ */
+
+export interface FanUser {
+  mid: number
+  uname: string
+  sign: string
+  face: string
+  /** 0 陌生人 2 已关注 6 互关 128 已拉黑 */
+  attribute: number
+  mtime: number
+}
+
+/**
+ * 粉丝列表。
+ * 对他人可读，但目标关闭「粉丝列表可见」时会返回 -403；
+ * 因此连坐永远是「能拿到才算」，拿不到就跳过，不当成没有。
+ */
+export async function fetchFans(vmid: number, pn = 1, ps = 50): Promise<{ list: FanUser[]; total: number }> {
+  const data = await plainGet<{ list: Array<Record<string, unknown>>; total?: number }>(
+    '/x/relation/fans',
+    { vmid, pn, ps },
+    `${SPACE_REFERER}${vmid}/relation/fans`,
+  )
+  return {
+    list: (data.list ?? []).map((u) => ({
+      mid: Number(u.mid),
+      uname: String(u.uname ?? ''),
+      sign: String(u.sign ?? ''),
+      face: String(u.face ?? ''),
+      attribute: Number(u.attribute ?? 0),
+      mtime: Number(u.mtime ?? 0),
+    })),
+    total: data.total ?? 0,
+  }
+}
+
+export interface RelationStat {
+  following: number
+  follower: number
+}
+
+export async function fetchRelationStat(vmid: number): Promise<RelationStat> {
+  const data = await plainGet<{ following?: number; follower?: number }>('/x/relation/stat', { vmid })
+  return { following: data.following ?? 0, follower: data.follower ?? 0 }
+}
+
+/* ------------------------------------------------------------------ */
+/* 内容来源：历史 / 热门 / 排行榜                                      */
+/* ------------------------------------------------------------------ */
+
+export interface VideoRef {
+  aid: number
+  bvid: string
+  title: string
+  author: string
+  mid: number
+  desc?: string
+  /** 该视频的评论区值不值得扫：评论数 */
+  comment?: number
+  source: 'history' | 'popular' | 'search' | 'ranking'
+}
+
+/** 自己的观看历史，需要登录。这是「我实际会看到什么」最直接的来源。 */
+export async function fetchHistory(ps = 30): Promise<VideoRef[]> {
+  const data = await plainGet<{
+    list?: Array<{
+      title?: string
+      author_name?: string
+      author_mid?: number
+      aid?: number
+      bvid?: string
+      history?: { oid?: number; bvid?: string; business?: string }
+    }>
+  }>(
+    '/x/web-interface/history/cursor',
+    { max: 0, view_at: 0, business: '', ps, type: 'archive' },
+    'https://www.bilibili.com/',
+  )
+  const out: VideoRef[] = []
+  for (const item of data.list ?? []) {
+    const aid = Number(item.aid ?? item.history?.oid ?? 0)
+    if (!aid) continue
+    out.push({
+      aid,
+      bvid: item.bvid ?? item.history?.bvid ?? '',
+      title: item.title ?? '',
+      author: item.author_name ?? '',
+      mid: Number(item.author_mid ?? 0),
+      source: 'history',
+    })
+  }
+  return out
+}
+
+/** 热门视频。不需要登录，用来补足「没看过的领域」。 */
+export async function fetchPopular(ps = 50): Promise<VideoRef[]> {
+  const data = await plainGet<{
+    list?: Array<{
+      aid?: number
+      bvid?: string
+      title?: string
+      desc?: string
+      owner?: { mid?: number; name?: string }
+      stat?: { reply?: number }
+    }>
+  }>('/x/web-interface/popular', { ps, pn: 1 }, 'https://www.bilibili.com/v/popular/all')
+  return (data.list ?? [])
+    .filter((v) => v.aid)
+    .map((v) => ({
+      aid: Number(v.aid),
+      bvid: v.bvid ?? '',
+      title: v.title ?? '',
+      author: v.owner?.name ?? '',
+      mid: Number(v.owner?.mid ?? 0),
+      desc: v.desc ?? '',
+      comment: v.stat?.reply ?? 0,
+      source: 'popular' as const,
+    }))
+}
+
+/** 排行榜。按分区取样，能盖到热门之外的内容。 */
+export async function fetchRanking(rid = 0, ps = 50): Promise<VideoRef[]> {
+  const data = await plainGet<{
+    list?: Array<{
+      aid?: number
+      bvid?: string
+      title?: string
+      desc?: string
+      owner?: { mid?: number; name?: string }
+      stat?: { reply?: number }
+    }>
+  }>('/x/web-interface/ranking/v2', { rid, type: 'all' }, 'https://www.bilibili.com/v/popular/rank/all')
+  return (data.list ?? [])
+    .slice(0, ps)
+    .filter((v) => v.aid)
+    .map((v) => ({
+      aid: Number(v.aid),
+      bvid: v.bvid ?? '',
+      title: v.title ?? '',
+      author: v.owner?.name ?? '',
+      mid: Number(v.owner?.mid ?? 0),
+      desc: v.desc ?? '',
+      comment: v.stat?.reply ?? 0,
+      source: 'ranking' as const,
+    }))
+}
+
+/** 视频详情：用于补简介与标签，判断商单。 */
+export async function fetchVideoDetail(aid: number): Promise<{
+  desc: string
+  tag: string
+  title: string
+  mid: number
+  author: string
+  reply: number
+} | null> {
+  try {
+    const data = await plainGet<{
+      desc?: string
+      tname?: string
+      title?: string
+      tag?: string
+      owner?: { mid?: number; name?: string }
+      stat?: { reply?: number }
+    }>('/x/web-interface/view', { aid }, `https://www.bilibili.com/video/av${aid}`)
+    return {
+      desc: data.desc ?? '',
+      tag: data.tag ?? '',
+      title: data.title ?? '',
+      mid: Number(data.owner?.mid ?? 0),
+      author: data.owner?.name ?? '',
+      reply: Number(data.stat?.reply ?? 0),
+    }
+  } catch {
+    return null
   }
 }

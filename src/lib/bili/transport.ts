@@ -125,7 +125,7 @@ function unreachable(): string | null {
   return '接口不可达（跨域被拦截）'
 }
 
-const RETRYABLE_STATUS = new Set([412, 429, 500, 502, 503, 504])
+const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504])
 
 export async function httpRequest(req: HttpRequest): Promise<HttpResponse> {
   if (BILI_HOSTS.test(req.url)) {
@@ -140,6 +140,12 @@ export async function httpRequest(req: HttpRequest): Promise<HttpResponse> {
   for (;;) {
     try {
       const res = await limiter.run(() => rawRequest(req))
+      // -412 是 IP 级风控，返回的是 HTML 错误页；重试只会加重风控
+      if (res.status === 412) {
+        limiter.cooldown(90_000)
+        lastError = '触发 IP 风控，已冷却 90 秒'
+        return res
+      }
       if (RETRYABLE_STATUS.has(res.status) && attempt < retries) {
         limiter.cooldown(1500 * (attempt + 1))
         await sleep(800 * (attempt + 1))

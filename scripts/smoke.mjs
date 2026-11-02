@@ -115,7 +115,7 @@ for (const label of read.tabs) {
 
 if (shot) {
   await page.evaluate(() => {
-    const b = [...document.querySelectorAll('nav button')].find((x) => x.textContent.trim().startsWith('账号'))
+    const b = [...document.querySelectorAll('nav button')].find((x) => x.textContent.trim().startsWith('目标'))
     b?.click()
   })
   await new Promise((r) => setTimeout(r, 300))
@@ -123,13 +123,37 @@ if (shot) {
   await page.screenshot({ path: shot, fullPage: true })
 }
 
+// 演示数据：走一遍「设置 → 载入演示 → 复核」的真实交互，确认列表能渲染出候选
+const demo = await (async () => {
+  const clicked = await page.evaluate(() => {
+    const nav = [...document.querySelectorAll('nav button')].find((x) => x.textContent.trim().startsWith('设置'))
+    nav?.click()
+    return Boolean(nav)
+  })
+  if (!clicked) return { ok: false, reason: '找不到设置标签' }
+  await new Promise((r) => setTimeout(r, 260))
+  const loaded = await page.evaluate(() => {
+    const btn = [...document.querySelectorAll('button')].find((b) => b.textContent.includes('载入演示结果'))
+    btn?.click()
+    return Boolean(btn)
+  })
+  if (!loaded) return { ok: false, reason: '找不到演示按钮' }
+  await new Promise((r) => setTimeout(r, 420))
+  const stats = await page.evaluate(() => {
+    const text = document.querySelector('main')?.innerText ?? ''
+    const links = [...document.querySelectorAll('main a[href*="space.bilibili.com"]')].length
+    return { text: text.replace(/\s+/g, ' ').slice(0, 160), links, hasBlock: text.includes('建议拉黑') }
+  })
+  return { ok: stats.hasBlock && stats.links >= 3, ...stats }
+})()
+
 await browser.close()
 
 const f = []
 const P = read.panel
 if (!read.mounted) f.push('应用未挂载')
 if (!read.hasTitle) f.push('缺少标题')
-if (read.tabs.length !== 6) f.push(`标签数异常: ${read.tabs.length}`)
+if (read.tabs.length !== 5) f.push(`标签数异常: ${read.tabs.length}`)
 if (read.rootFontSize !== '13px') f.push(`根字号异常: ${read.rootFontSize}`)
 
 // 样式是否真的落到元素上——这几条曾经全部失败
@@ -149,8 +173,9 @@ if (read.input && read.input.bg === 'rgba(0, 0, 0, 0)') f.push('输入框无背�
 if (read.insideBg && read.insideBg === read.bodyBg) f.push('面板与页面底色一致，层次未拉开')
 if (errors.length) f.push(`控制台报错: ${errors.slice(0, 3).join(' | ')}`)
 for (const [k, v] of Object.entries(views)) if (!v) f.push(`视图为空: ${k}`)
+if (!demo.ok) f.push(`演示结果未渲染: ${demo.reason ?? demo.text ?? ''}`)
 
-console.log(JSON.stringify({ ...read, views, errors }, null, 2))
+console.log(JSON.stringify({ ...read, views, demo, errors }, null, 2))
 if (f.length) {
   console.error('\n失败:\n' + f.map((x) => ` - ${x}`).join('\n'))
   process.exit(1)

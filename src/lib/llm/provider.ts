@@ -1,6 +1,5 @@
 import { estimateCost } from './pricing'
-import { FAMILIES } from '../analyze/lexicon'
-import type { Profile, Usage } from '../types'
+import type { Usage } from '../types'
 
 export interface LlmConfig {
   baseUrl: string
@@ -24,7 +23,6 @@ const CJK_RE = /[\u3400-\u9fff\uf900-\ufaff\u3040-\u30ff\uac00-\ud7af]/
 /**
  * 分词估算。仅在接口未返回 usage 时作为兜底；
  * 接口返回的 usage 始终优先，因此计费以服务端口径为准。
- * 中日韩字符按约 0.75 token/字，其余按约 3.6 字符/token。
  */
 export function estimateTokens(text: string): number {
   let cjk = 0
@@ -133,48 +131,6 @@ function extractJson(text: string): unknown {
     const end = trimmed.lastIndexOf('}')
     if (start >= 0 && end > start) return JSON.parse(trimmed.slice(start, end + 1))
     throw new Error('模型未返回合法 JSON')
-  }
-}
-
-function asStringArray(value: unknown, limit: number): string[] {
-  if (!Array.isArray(value)) return []
-  return value
-    .filter((v): v is string => typeof v === 'string')
-    .map((v) => v.trim())
-    .filter((v) => v.length > 0 && v.length < 60)
-    .slice(0, limit)
-}
-
-const KNOWN_FAMILIES = new Set(FAMILIES.map((f) => f.id))
-
-export async function generateProfile(
-  cfg: LlmConfig,
-  system: string,
-  user: string,
-): Promise<{ profile: Profile; usage: Usage }> {
-  const { content, usage } = await chat(cfg, system, user, true)
-  const raw = extractJson(content) as Record<string, unknown>
-
-  const families = asStringArray(raw.families, 6).filter((f) => KNOWN_FAMILIES.has(f))
-  const markers = asStringArray(raw.markers, 40)
-  const guards = asStringArray(raw.guards, 30)
-
-  if (!markers.length) throw new Error('模型未生成有效标记词')
-
-  return {
-    profile: {
-      raw: user.replace(/^用户描述：/, ''),
-      target: typeof raw.target === 'string' && raw.target.trim() ? raw.target.trim().slice(0, 160) : user,
-      families,
-      topics: asStringArray(raw.topics, 16),
-      markers,
-      exemplars: asStringArray(raw.exemplars, 12),
-      guards,
-      allow: asStringArray(raw.allow, 10),
-      engine: 'llm',
-      usage,
-    },
-    usage,
   }
 }
 

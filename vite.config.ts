@@ -12,8 +12,8 @@ export default defineConfig({
       userscript: {
         name: '立体防御',
         namespace: 'https://github.com/starchfurrycon/stereo-defense',
-        version: '1.0.0',
-        description: 'B 站多源画像范围拉黑',
+        version: '2.0.0',
+        description: 'B 站范围拉黑：八类目标、离线判定、证据可查、力度可调',
         author: 'starchfurrycon',
         license: 'MIT',
         match: ['*://*.bilibili.com/*'],

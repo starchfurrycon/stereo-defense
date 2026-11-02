@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2023", "DOM"],
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "outDir": ".eval-out",
+    "rootDir": ".",
+    "noEmit": false,
+    "types": []
+  },
+  "include": ["src/lib/analyze/**/*.ts", "src/lib/verdict.ts", "src/lib/types.ts", "scripts/eval.ts", "scripts/try.ts"],
+  "exclude": ["src/lib/analyze/local.ts", "src/lib/analyze/score.ts", "src/lib/analyze/segment.ts", "src/lib/analyze/embed.ts", "src/lib/analyze/lexicon.ts"]
+}

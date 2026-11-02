@@ -49,10 +49,12 @@ function mount(): void {
   }
 
   launcher.addEventListener('click', () => setOpen(true))
-  GM_registerMenuCommand?.('打开立体防御', () => setOpen(true))
+  if (typeof GM_registerMenuCommand === 'function') {
+    GM_registerMenuCommand('打开立体防御', () => setOpen(true))
+  }
 
-  // 首次使用直接展开，之后保持悬浮入口，不打扰浏览
-  if (!useStore.getState().profile) setOpen(true)
+  // 首次使用（没有任何扫描结果）直接展开，之后保持悬浮入口，不打扰浏览
+  if (!useStore.getState().candidates.length) setOpen(true)
 
   // 补种匿名指纹，降低后续请求被风控的概率
   void fetchFingerprint()

@@ -1,7 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useStore, type Tab } from '../lib/store'
-import { AccountView } from './views/Account'
-import { ProfileView } from './views/ProfileView'
+import { TargetsView } from './views/TargetsView'
 import { ScanView } from './views/ScanView'
 import { ReviewView } from './views/ReviewView'
 import { BlacklistView } from './views/BlacklistView'
@@ -10,8 +9,7 @@ import { setProxyPrefix, limiter } from '../lib/bili/transport'
 import { cn } from './ui'
 
 const TABS: Array<{ id: Tab; label: string }> = [
-  { id: 'account', label: '账号' },
-  { id: 'profile', label: '画像' },
+  { id: 'targets', label: '目标' },
   { id: 'scan', label: '扫描' },
   { id: 'review', label: '复核' },
   { id: 'blacklist', label: '黑名单' },
@@ -56,7 +54,7 @@ export function App({ onClose }: { onClose?: () => void }) {
     limiter.setConcurrency(concurrency)
   }, [concurrency])
 
-  const pending = candidates.filter((c) => c.verdict !== 'skip' && !c.blocked).length
+  const pending = candidates.filter((c) => c.verdict === 'block' && !c.blocked).length
 
   // 下划线跟随当前标签滑动
   const navRef = useRef<HTMLElement>(null)
@@ -139,8 +137,7 @@ export function App({ onClose }: { onClose?: () => void }) {
       </header>
 
       <main className="relative z-10 mx-auto w-full max-w-[1180px] flex-1 px-6 py-6">
-        {tab === 'account' && <AccountView />}
-        {tab === 'profile' && <ProfileView />}
+        {tab === 'targets' && <TargetsView />}
         {tab === 'scan' && <ScanView />}
         {tab === 'review' && <ReviewView />}
         {tab === 'blacklist' && <BlacklistView />}

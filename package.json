@@ -1,9 +1,9 @@
 {
   "name": "stereo-defense",
   "private": true,
-  "version": "1.0.0",
+  "version": "2.0.0",
   "type": "module",
-  "description": "立体防御 — B 站多源画像范围拉黑工具",
+  "description": "立体防御 — B 站范围拉黑工具：八类目标、离线判定、证据可查、力度可调",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -12,6 +12,7 @@
     "preview": "vite preview --config vite.config.web.ts",
     "smoke": "node scripts/smoke.mjs",
     "shots": "node scripts/shots.mjs",
+    "eval": "node scripts/run-eval.mjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
